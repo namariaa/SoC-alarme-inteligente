@@ -1,0 +1,1 @@
+# SoC-alarme-inteligente
