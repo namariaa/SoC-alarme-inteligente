@@ -147,12 +147,11 @@ Acionamento das saídas
 | **RF02** | Leitura de fumaça       | O sistema deve receber leituras periódicas de fumaça.                                         |
 | **RF03** | Configuração de limites | O sistema deve permitir a configuração dos limites de temperatura e fumaça.                   |
 | **RF04** | Detecção de alerta      | O sistema deve entrar em modo de alerta quando detectar um valor acima do limite de alerta.   |
-| **RF05** | Detecção de emergência  | O sistema deve entrar em modo de emergência quando detectar um valor acima do limite crítico. |
-| **RF06** | Acionamento do alarme   | Em emergência, o sistema deve acionar um alarme sonoro e um sinal visual.                     |
-| **RF07** | Registro de emergência  | O sistema deve registrar o último evento de emergência.                                       |
-| **RF08** | Reinicialização         | O sistema deve permitir a reinicialização manual após uma emergência.                         |
-| **RF09** | Validação de leituras   | O sistema deve ignorar leituras inválidas ou ausentes.                                        |
-| **RF10** | Atualização do estado   | O sistema deve atualizar seu estado ao menos uma vez a cada período de amostragem.            |
+| **RF05** | Acionamento do alarme   | O sistema deve entrar em modo de emergência quando detectar um valor acima do limite crítico e deve acionar um alarme sonoro e um sinal visual.                     |
+| **RF06** | Registro de emergência  | O sistema deve registrar o último evento de emergência.                                       |
+| **RF07** | Reinicialização         | O sistema deve permitir a reinicialização manual após uma emergência.                         |
+| **RF08** | Validação de leituras   | O sistema deve ignorar leituras inválidas ou ausentes.                                        |
+| **RF09** | Atualização do estado   | O sistema deve atualizar seu estado ao menos uma vez a cada período de amostragem.            |
 
 ## 8. Requisitos não funcionais
 
