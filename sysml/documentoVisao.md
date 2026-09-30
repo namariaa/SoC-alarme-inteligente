@@ -157,7 +157,6 @@ Acionamento das saídas
 
 | Código    | Nome                        | Descrição                                                                                                | Categoria      | Classificação |
 | :-------- | :-------------------------- | :------------------------------------------------------------------------------------------------------- | :------------- | :------------ |
-| **RNF01** | Periodicidade               | O sistema deve realizar a atualização de seu estado respeitando o período de amostragem definido.        | Desempenho     | Obrigatório   |
-| **RNF02** | Confiabilidade das leituras | O sistema não deve entrar indevidamente em estado de emergência devido a leituras inválidas ou ausentes. | Confiabilidade | Obrigatório   |
-| **RNF03** | Tempo de resposta           | O sistema deve processar as leituras e atualizar seu estado dentro do período de amostragem definido.    | Desempenho     | Obrigatório   |
-| **RNF04** | Configurabilidade           | Os limites utilizados para classificação das condições ambientais devem poder ser configurados.          | Flexibilidade  | Desejável     |
+| **RNF01** | Confiabilidade das leituras | O sistema não deve entrar indevidamente em estado de emergência devido a leituras inválidas ou ausentes. | Confiabilidade | Obrigatório   |
+| **RNF02** | Tempo de resposta           | O sistema deve processar as leituras e atualizar seu estado dentro do período de amostragem definido.    | Desempenho     | Obrigatório   |
+| **RNF03** | Configurabilidade           | Os limites utilizados para classificação das condições ambientais devem poder ser configurados.          | Flexibilidade  | Desejável     |
