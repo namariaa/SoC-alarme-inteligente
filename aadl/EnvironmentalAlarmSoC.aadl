@@ -1,0 +1,284 @@
+package EnvironmentalAlarmSoC
+public
+	data SensorReading
+	end SensorReading;
+	
+	data LimitsData
+	end LimitsData;
+	
+	data AlarmDecision
+	end AlarmDecision;
+	
+	data AlarmVisualCommand
+	end AlarmVisualCommand;
+	
+	data AlarmBuzzCommand
+	end AlarmBuzzCommand;
+	
+	data SystemState
+	end SystemState;
+	
+	data EventRecord     
+	end EventRecord;
+	
+	device TemperatureSensor 
+		features 
+			tempData: out data port SensorReading; 
+			busAccess: requires bus access Interconnect; 
+		flows 
+			tempSrc: flow source tempData;
+	end TemperatureSensor; 
+	
+	device implementation TemperatureSensor.impl 
+	end TemperatureSensor.impl;
+	
+	device SmokeSensor 
+		features 
+			smokeData: out data port SensorReading; 
+			busAccess: requires bus access Interconnect; 
+		flows 
+			smokeSrc: flow source smokeData;
+	end SmokeSensor; 
+	
+	device implementation SmokeSensor.impl 
+	end SmokeSensor.impl;
+	
+	device VisualAlarmDevice 
+		features 
+			triggerSignal: in event data port AlarmVisualCommand; 
+			busAccess: requires bus access Interconnect; 
+		flows
+			visualSink: flow sink triggerSignal;
+	end VisualAlarmDevice; 
+	
+	device implementation VisualAlarmDevice.impl 
+	end VisualAlarmDevice.impl;
+	
+	device BuzzAlarmDevice 
+		features 
+			triggerSignal: in event data port AlarmBuzzCommand; 
+			busAccess: requires bus access Interconnect; 
+	end BuzzAlarmDevice; 
+	
+	device implementation BuzzAlarmDevice.impl 
+	end BuzzAlarmDevice.impl;
+	
+	system AlarmSoC --Declaration of the system/subsystem type
+		features
+	        temperatureSensor: in data port SensorReading;
+	        smokeSensor: in data port SensorReading;
+	        configuredLimits: in data port LimitsData;
+	        alarmVisualOutput: out event data port AlarmVisualCommand;
+	        alarmBuzzOutput: out event data port AlarmBuzzCommand;
+	        statusOutput: out data port SystemState;
+	end AlarmSoC;
+	
+	system implementation AlarmSoC.impl -- Implementation of system type
+		subcomponents
+			cpu: processor ControlProcessor.impl;
+	      	ram: memory ConfigurationMemory.impl;
+	      	barramento: bus Interconnect;
+	      	getSensors: process SensorInterface.impl;
+	      	communication: process StatusInterface.impl;
+	      	control: process ControlProcess.impl;
+	      	tempSensorDev: device TemperatureSensor.impl;
+	      	smokeSensorDev: device SmokeSensor.impl;
+	      	visualAlarmSensorDev: device VisualAlarmDevice.impl;
+	      	buzzAlarmSensorDev: device BuzzAlarmDevice.impl;
+		   
+		 connections
+        	temperatureInput: port tempSensorDev.tempData -> getSensors.temperatureSensor;
+        	smokeInput: port smokeSensorDev.smokeData -> getSensors.smokeSensor;
+        	limitsInput: port configuredLimits -> control.limits;
+        	temperatureToControl: port getSensors.temperatureReading -> control.temperatureReading;
+        	smokeToControl: port getSensors.smokeReading -> control.smokeReading;
+        	alarmVisualConn: port control.alarmVisualCommand -> visualAlarmSensorDev.triggerSignal; 
+        	alarmBuzzConn: port control.alarmBuzzCommand -> buzzAlarmSensorDev.triggerSignal; 
+        	alarmVisualToOutput: port control.alarmVisualCommand -> alarmVisualOutput; 
+        	alarmBuzzToOutput: port control.alarmBuzzCommand -> alarmBuzzOutput;
+		  	eventToCommunication: port control.eventRecord -> communication.eventRecord;
+			statusToOutput: port communication.systemStatus -> statusOutput;
+        	cpuBus: bus access barramento <-> cpu.busAccess;
+			memoryBus: bus access barramento <-> ram.busAccess;
+			tempDevBus: bus access barramento <-> tempSensorDev.busAccess;
+			smokeDevBus: bus access barramento <-> smokeSensorDev.busAccess;
+			visualDevBus: bus access barramento <-> visualAlarmSensorDev.busAccess; 
+			buzzDevBus: bus access barramento <-> buzzAlarmSensorDev.busAccess;
+			
+			flows
+			tempAlarmFlow: end to end flow tempSensorDev.tempSrc -> temperatureInput -> getSensors.sensorTempFlow -> temperatureToControl -> control.readingTempVisualFlow -> alarmVisualConn -> visualAlarmSensorDev.visualSink;
+		properties
+			Actual_Processor_Binding => (reference (cpu)) applies to getSensors; 
+			Actual_Processor_Binding => (reference (cpu)) applies to control; 
+			Actual_Processor_Binding => (reference (cpu)) applies to communication; 
+			Actual_Memory_Binding => (reference (ram)) applies to getSensors; 
+			Actual_Memory_Binding => (reference (ram)) applies to control; 
+			Actual_Memory_Binding => (reference (ram)) applies to communication;
+	end AlarmSoC.impl;
+	
+	--PROCESSOR
+    processor ControlProcessor --Control and decision (CPU)
+	    features
+	        busAccess: requires bus access Interconnect;
+	end ControlProcessor;
+
+	processor implementation ControlProcessor.impl
+	end ControlProcessor.impl;
+	
+	--PROCESS
+	process SensorInterface --get sensors
+		features
+	        temperatureSensor: in data port SensorReading;
+	        smokeSensor: in data port SensorReading;
+	        temperatureReading: out data port SensorReading;
+	        smokeReading: out data port SensorReading;
+		flows
+			sensorTempFlow: flow path temperatureSensor -> temperatureReading;
+			sensorSmokeFlow: flow path smokeSensor -> smokeReading;
+	end SensorInterface;
+
+	process implementation SensorInterface.impl
+		subcomponents
+        	temperature: thread ReadTemperature;
+        	smoke: thread ReadSmoke;
+    	connections
+        	temperatureInput: port temperatureSensor -> temperature.sensorValue;
+        	temperatureOutput:  port temperature.reading -> temperatureReading;
+			smokeInput: port smokeSensor -> smoke.sensorValue;
+			smokeOutput: port smoke.reading -> smokeReading;
+	end SensorInterface.impl;
+	
+	process StatusInterface --communication
+	    features
+	        eventRecord: in data port EventRecord;
+	        systemStatus: out data port SystemState;
+		flows
+			recordFlow: flow path eventRecord -> systemStatus;
+	end StatusInterface;
+	
+	process implementation StatusInterface.impl
+	    subcomponents
+	        communication: thread RegisterEvents;
+	    connections
+	        eventInput: port eventRecord -> communication.eventRecord;
+	        statusOutput: port communication.systemStatus -> systemStatus;
+	end StatusInterface.impl;
+	
+	process ControlProcess --control
+	    features
+	        temperatureReading: in data port SensorReading;
+	        smokeReading: in data port SensorReading;
+	        limits: in data port LimitsData;
+	        alarmVisualCommand: out event data port AlarmVisualCommand;
+	        alarmBuzzCommand: out event data port AlarmBuzzCommand;
+	        systemState: out data port SystemState;
+	        eventRecord: out data port EventRecord;
+		flows
+			readingTempVisualFlow: flow path temperatureReading -> alarmVisualCommand;
+			readingTempBuzzFlow: flow path temperatureReading -> alarmBuzzCommand;
+			readingSmokeVisualFlow: flow path smokeReading -> alarmVisualCommand;
+			readingSmokeBuzzFlow: flow path smokeReading -> alarmBuzzCommand;
+			saveLimits: flow path limits -> systemState;
+			eventSaveTemp: flow path temperatureReading -> eventRecord;
+			eventSaveSmoke: flow path smokeReading -> eventRecord;
+	end ControlProcess;
+
+	process implementation ControlProcess.impl
+	    subcomponents
+	        limitsAssess: thread AssessLimits;
+	        control: thread ControlAlarm;
+	    connections
+	        temperatureInput: port temperatureReading -> limitsAssess.temperatureReading;
+	        smokeInput: port smokeReading -> limitsAssess.smokeReading;
+	        limitsInput: port limits -> limitsAssess.limitsData;
+	        decisionToControl: port limitsAssess.decision -> control.decision;
+	        alarmVisualOutput: port control.alarmVisualCommand -> alarmVisualCommand;
+	        alarmBuzzOutput: port control.alarmBuzzCommand -> alarmBuzzCommand;
+	        stateOutput: port control.systemState -> systemState;
+	        eventOutput: port control.eventRecord -> eventRecord;
+	end ControlProcess.impl;
+	
+	--MEMORY
+	memory ConfigurationMemory
+		features
+	        busAccess: requires bus access Interconnect;
+	end ConfigurationMemory;
+	
+	memory implementation ConfigurationMemory.impl
+	end ConfigurationMemory.impl;
+	
+	--BUS
+	bus Interconnect
+	end Interconnect;
+	
+	bus implementation Interconnect.impl
+	end Interconnect.impl;
+	
+	--THREADS
+	thread ReadTemperature
+	    features
+	        sensorValue: in data port SensorReading;
+	        reading: out data port SensorReading;
+		flows
+			readTemp: flow path sensorValue -> reading;
+		properties
+			Dispatch_Protocol => Periodic;
+	      	Period => 100 ms;
+	      	Compute_Execution_Time => 1 ms .. 2 ms;
+	      	Priority => 7;
+	end ReadTemperature;
+	
+	thread ReadSmoke
+		features
+			sensorValue: in data port SensorReading;
+		    reading: out data port SensorReading;
+		flows
+			readTemp: flow path sensorValue -> reading;
+		properties
+			Dispatch_Protocol => Periodic;
+	      	Period => 100 ms;
+	      	Compute_Execution_Time => 1 ms .. 2 ms;
+	      	Priority => 10;
+	end ReadSmoke;
+	
+	thread AssessLimits
+	    features
+	        temperatureReading: in data port SensorReading;
+	        smokeReading: in data port SensorReading;
+	        limitsData: in data port LimitsData;
+	        decision: out data port AlarmDecision;
+	    flows
+			assessTempFlow: flow path temperatureReading -> decision;
+			assessSmokeFlow: flow path smokeReading -> decision;
+	    properties
+			Dispatch_Protocol => Aperiodic;
+	      	Compute_Execution_Time => 1 ms .. 2 ms;
+	      	Priority => 15;
+	end AssessLimits;
+	
+	thread ControlAlarm
+		features
+			decision: in data port AlarmDecision;
+	        alarmVisualCommand: out event data port AlarmVisualCommand;
+	        alarmBuzzCommand: out event data port AlarmBuzzCommand;
+	        systemState: out data port SystemState;
+	        eventRecord: out data port EventRecord;
+		flows
+			controlVisualFlow: flow path decision -> alarmVisualCommand;
+	     properties
+			Dispatch_Protocol => Aperiodic;
+	      	Compute_Execution_Time => 1 ms .. 2 ms;
+			Priority => 20;
+	end ControlAlarm;
+	
+	thread RegisterEvents
+		features 
+			eventRecord: in data port EventRecord;
+			systemStatus: out data port SystemState;
+		properties
+			Dispatch_Protocol => Aperiodic;
+	      	Compute_Execution_Time => 1 ms .. 2 ms;
+	      	Priority => 5;
+	end RegisterEvents;
+	 
+end EnvironmentalAlarmSoC;
